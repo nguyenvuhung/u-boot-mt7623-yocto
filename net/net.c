@@ -181,7 +181,7 @@ IPaddr_t	NetNtpServerIP;
 int		NetTimeOffset;
 #endif
 
-static uchar PktBuf[(PKTBUFSRX+1) * PKTSIZE_ALIGN + PKTALIGN];
+volatile uchar PktBuf[(PKTBUFSRX+1) * PKTSIZE_ALIGN + PKTALIGN];
 
 /* Receive packet */
 uchar *NetRxPackets[PKTBUFSRX];
@@ -301,7 +301,7 @@ void net_init(void)
 		 */
 		int i;
 
-		NetTxPacket = &PktBuf[0] + (PKTALIGN - 1);
+		NetTxPacket = (uchar *)(&PktBuf[0] + (PKTALIGN - 1));
 		NetTxPacket -= (ulong)NetTxPacket % PKTALIGN;
 		for (i = 0; i < PKTBUFSRX; i++)
 			NetRxPackets[i] = NetTxPacket + (i + 1) * PKTSIZE_ALIGN;

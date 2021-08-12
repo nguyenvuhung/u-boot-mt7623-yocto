@@ -101,9 +101,14 @@ static inline int write_env(struct mmc *mmc, unsigned long size,
 			    unsigned long offset, const void *buffer)
 {
 	uint blk_start, blk_cnt, n;
-
+printf("offset=%lu \n", offset);
+printf("size=%lu \n", size);
+printf("mmc->write_bl_len=%d\n", mmc->write_bl_len);
 	blk_start	= ALIGN(offset, mmc->write_bl_len) / mmc->write_bl_len;
 	blk_cnt		= ALIGN(size, mmc->write_bl_len) / mmc->write_bl_len;
+
+   // printf("write_env: size=%lu, offset=0x%x, blk_start=0x%x, blk_cnt=0x%x\n",
+     //       size, offset, blk_start, blk_cnt);
 
 	n = mmc->block_dev.block_write(CONFIG_SYS_MMC_ENV_DEV, blk_start,
 					blk_cnt, (u_char *)buffer);
@@ -181,6 +186,12 @@ static inline int read_env(struct mmc *mmc, unsigned long size,
 	n = mmc->block_dev.block_read(CONFIG_SYS_MMC_ENV_DEV, blk_start,
 					blk_cnt, (uchar *)buffer);
 
+	if (n != blk_cnt) {
+    	printf("env read error, read %u of %u blocks\n", n, blk_cnt);
+		printf("env: ***size=%lu, offset=%lu, blk_start=%d, blk_cnt=%d\n",
+             size, offset, blk_start, blk_cnt);
+	}
+		
 	return (n == blk_cnt) ? 0 : -1;
 }
 

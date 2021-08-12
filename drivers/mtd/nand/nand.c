@@ -29,6 +29,16 @@
 #define CONFIG_SYS_NAND_BASE_LIST { CONFIG_SYS_NAND_BASE }
 #endif
 
+#if defined (CONFIG_MTK_MTD_NAND)
+#include <linux/mtd/partitions.h>
+#include <asm/arch/nand/partition_define.h>
+#include <asm/arch/nand/bmt.h>
+extern struct mtd_partition g_exist_Partition[PART_MAX_COUNT];
+extern int part_num;
+extern u32 g_bmt_sz;
+extern bmt_struct *g_bmt;
+#endif /* CONFIG_MTK_MTD_NAND */ 
+
 DECLARE_GLOBAL_DATA_PTR;
 
 int nand_curr_device = -1;
@@ -90,11 +100,20 @@ static void nand_init_chip(int i)
 
 	if (board_nand_init(nand))
 		return;
-
+#if defined (CONFIG_MTK_MTD_NAND)
+	memcpy(mtd, nand->priv, sizeof(struct mtd_info));
+#endif
 	if (nand_scan(mtd, maxchips))
 		return;
 
 	nand_register(i);
+	
+#if defined (CONFIG_MTK_MTD_NAND)	
+	memcpy(nand->priv, mtd, sizeof(struct mtd_info));
+	g_bmt = init_bmt(nand, g_bmt_sz);
+	part_init_pmt(mtd, (u8 *) & g_exist_Partition[0]);
+	add_mtd_partitions(mtd, g_exist_Partition, part_num);
+#endif	
 }
 #endif
 

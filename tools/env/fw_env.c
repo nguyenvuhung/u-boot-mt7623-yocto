@@ -21,6 +21,8 @@
 #include <sys/stat.h>
 #include <unistd.h>
 
+#include <elf.h>
+
 #ifdef MTD_OLD
 # include <stdint.h>
 # include <linux/mtd/mtd.h>
@@ -201,7 +203,7 @@ int fw_printenv (int argc, char *argv[])
 	int i, n_flag;
 	int rc = 0;
 
-	if (fw_env_open())
+	if (fw_env_open(NULL))
 		return -1;
 
 	if (argc == 1) {		/* Print all env variables  */
@@ -216,6 +218,7 @@ int fw_printenv (int argc, char *argv[])
 
 			printf ("%s\n", env);
 		}
+		fw_env_close(NULL);
 		return 0;
 	}
 
@@ -261,10 +264,11 @@ int fw_printenv (int argc, char *argv[])
 		}
 	}
 
+	fw_env_close(NULL);
 	return rc;
 }
 
-int fw_env_close(void)
+int fw_env_flush(struct env_opts *opts)
 {
 	/*
 	 * Update CRC
@@ -281,6 +285,15 @@ int fw_env_close(void)
 	return 0;
 }
 
+int fw_env_close(struct env_opts *opts)
+{
+	if (environment.image)
+		free(environment.image);
+
+	environment.image = NULL;
+
+	return 0;
+}
 
 /*
  * Set/Clear a single variable in the environment.
@@ -417,21 +430,24 @@ int fw_setenv(int argc, char *argv[])
 	size_t len;
 	char *name;
 	char *value = NULL;
+	int ret;
 
 	if (argc < 2) {
 		errno = EINVAL;
 		return -1;
 	}
 
-	if (fw_env_open()) {
+	if (fw_env_open(NULL)) {
 		fprintf(stderr, "Error: environment not initialized\n");
 		return -1;
 	}
 
 	name = argv[1];
 
-	if (env_flags_validate_env_set_params(argc, argv) < 0)
-		return 1;
+	if (env_flags_validate_env_set_params(argc, argv) < 0) {
+		fw_env_close(NULL);
+		return -1;
+	}
 
 	len = 0;
 	for (i = 2; i < argc; ++i) {
@@ -457,7 +473,10 @@ int fw_setenv(int argc, char *argv[])
 
 	free(value);
 
-	return fw_env_close();
+	ret = fw_env_flush(NULL);
+	fw_env_close(NULL);
+
+	return ret;
 }
 
 /*
@@ -477,7 +496,7 @@ int fw_setenv(int argc, char *argv[])
  * 0	  - OK
  * -1     - Error
  */
-int fw_parse_script(char *fname)
+int fw_parse_script(char *fname, struct env_opts *opts)
 {
 	FILE *fp;
 	char dump[1024];	/* Maximum line length in the file */
@@ -487,7 +506,7 @@ int fw_parse_script(char *fname)
 	int len;
 	int ret = 0;
 
-	if (fw_env_open()) {
+	if (fw_env_open(NULL)) {
 		fprintf(stderr, "Error: environment not initialized\n");
 		return -1;
 	}
@@ -577,7 +596,9 @@ int fw_parse_script(char *fname)
 	if (strcmp(fname, "-") != 0)
 		fclose(fp);
 
-	ret |= fw_env_close();
+	ret |= fw_env_flush(NULL);
+
+	fw_env_close(NULL);
 
 	return ret;
 
@@ -1065,7 +1086,7 @@ static char *envmatch (char * s1, char * s2)
 /*
  * Prevent confusion if running from erased flash memory
  */
-int fw_env_open(void)
+int fw_env_open(struct env_opts *opts)
 {
 	int crc0, crc0_ok;
 	unsigned char flag0;

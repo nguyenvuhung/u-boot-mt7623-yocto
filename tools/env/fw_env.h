@@ -55,9 +55,28 @@
 extern int   fw_printenv(int argc, char *argv[]);
 extern char *fw_getenv  (char *name);
 extern int fw_setenv  (int argc, char *argv[]);
-extern int fw_parse_script(char *fname);
-extern int fw_env_open(void);
 extern int fw_env_write(char *name, char *value);
-extern int fw_env_close(void);
+
+/*------------------------------------------------------*/
+/* backport structs and function definitions from later
+ * u-boot versions to make this compatible with swupdate
+ * (which relies on libubootenv.a)
+ */
+
+#define AES_KEY_LENGTH  (128 / 8)
+
+struct env_opts {
+        char *config_file;
+        int aes_flag; /* Is AES encryption used? */
+        char aes_key[AES_KEY_LENGTH];
+};
+
+
+extern int fw_parse_script(char *fname, struct env_opts *opts);
+extern int fw_env_open(struct env_opts *opts);
+extern int fw_env_close(struct env_opts *opts);
+extern int fw_env_flush(struct env_opts *opts);
+
+/*------------------------------------------------------*/
 
 extern unsigned	long  crc32	 (unsigned long, const unsigned char *, unsigned);

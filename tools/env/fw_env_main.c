@@ -122,7 +122,7 @@ int main(int argc, char *argv[])
 			if (fw_setenv(argc, argv) != 0)
 				retval = EXIT_FAILURE;
 		} else {
-			if (fw_parse_script(script_file) != 0)
+			if (fw_parse_script(script_file, NULL) != 0)
 				retval = EXIT_FAILURE;
 		}
 	} else {
